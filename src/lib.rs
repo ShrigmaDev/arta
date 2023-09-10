@@ -1,3 +1,5 @@
+use std::sync::RwLock;
+
 use reqwest::StatusCode;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -99,7 +101,7 @@ impl ResponseArgs for SessionGet {}
 
 pub struct Client {
     url: String,
-    session_id: Option<String>,
+    session_id: RwLock<Option<String>>,
     http_client: reqwest::Client,
 }
 
@@ -107,13 +109,13 @@ impl Client {
     pub fn new(url: &str) -> Self {
         Self {
             url: url.to_owned(),
-            session_id: None,
+            session_id: None.into(),
             http_client: reqwest::Client::new(),
         }
     }
 
     async fn request<T: ResponseArgs + DeserializeOwned>(
-        &mut self,
+        &self,
         method: Method,
         arguments: Option<Args>,
     ) -> Result<TransmissionResponse<T>> {
@@ -124,14 +126,14 @@ impl Client {
         const RETRIES: u8 = 5;
         for _retry in 0..RETRIES {
             let mut request = self.http_client.post(&self.url);
-            if let Some(session_id) = &self.session_id {
+            if let Some(session_id) = self.session_id.read().unwrap().as_deref() {
                 request = request.header("X-Transmission-Session-id", session_id);
             }
             request = request.json(&data);
             let response = request.send().await?;
             println!("status code = {}", response.status());
             if response.status() == StatusCode::CONFLICT {
-                self.session_id = Some(
+                *self.session_id.write().unwrap() = Some(
                     response.headers()["X-Transmission-Session-id"]
                         .to_str()
                         .unwrap()
