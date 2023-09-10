@@ -152,7 +152,7 @@ impl Client {
     }
 
     pub async fn session_get(
-        &mut self,
+        &self,
         fields: Option<Vec<SessionGetFields>>,
     ) -> Result<TransmissionResponse<SessionGet>> {
         self.request(
@@ -163,7 +163,7 @@ impl Client {
     }
 
     pub async fn torrent_add(
-        &mut self,
+        &self,
         args: TorrentAddArgs,
     ) -> Result<TransmissionResponse<TorrentAdd>> {
         self.request(Method::TorrentAdd, Some(Args::TorrentAdd(args)))
@@ -178,7 +178,7 @@ mod tests {
     #[tokio::test]
     async fn test_session_get() {
         let url = "http://127.0.0.1:9091/transmission/rpc".to_owned();
-        let mut trans_client = Client::new(&url);
+        let trans_client = Client::new(&url);
         let res = trans_client
             .session_get(Some(vec![SessionGetFields::RPCVersion]))
             .await;
@@ -195,7 +195,7 @@ mod tests {
     #[tokio::test]
     async fn test_torrent_add() {
         let url = "http://127.0.0.1:9091/transmission/rpc".to_owned();
-        let mut trans_client = Client::new(&url);
+        let trans_client = Client::new(&url);
         let arch_iso_magnet = "magnet:?xt=urn:btih:7a9c4a72e79fcf5f65f091e462b60e589af3f865&dn=archlinux-2023.08.01-x86_64.iso".to_owned();
         let res = trans_client
             .torrent_add(TorrentAddArgs {
