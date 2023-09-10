@@ -42,19 +42,19 @@ enum Args {
 #[serde(rename_all = "kebab-case")]
 #[derive(Default)]
 pub struct TorrentAddArgs {
-    cookies: Option<String>,
-    download_dir: Option<String>,
-    filename: Option<String>,
-    labels: Option<String>,
-    metainfo: Option<String>,
-    paused: Option<String>,
-    peer_limit: Option<u32>,
-    bandwidth_priority: Option<u32>, // -1, 0, 1 for LOW MEDIUM HIGH priority torrent
-    files_wanted: Option<Vec<u32>>,
-    files_unwanted: Option<Vec<u32>>,
-    priority_high: Option<Vec<u32>>,
-    priority_low: Option<Vec<u32>>,
-    priority_normal: Option<Vec<u32>>,
+    pub cookies: Option<String>,
+    pub download_dir: Option<String>,
+    pub filename: Option<String>,
+    pub labels: Option<String>,
+    pub metainfo: Option<String>,
+    pub paused: Option<String>,
+    pub peer_limit: Option<u32>,
+    pub bandwidth_priority: Option<u32>, // -1, 0, 1 for LOW MEDIUM HIGH priority torrent
+    pub files_wanted: Option<Vec<u32>>,
+    pub files_unwanted: Option<Vec<u32>>,
+    pub priority_high: Option<Vec<u32>>,
+    pub priority_low: Option<Vec<u32>>,
+    pub priority_normal: Option<Vec<u32>>,
 }
 
 // #[skip_serializing_none]
