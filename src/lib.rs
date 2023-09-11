@@ -26,6 +26,8 @@ enum Method {
     SessionGet,
     #[serde(rename = "torrent-add")]
     TorrentAdd,
+    #[serde(rename = "torrent-get")]
+    TorrentGet,
 }
 
 #[derive(Serialize)]
@@ -33,6 +35,67 @@ enum Method {
 enum Args {
     SessionGet(SessionGetArgs),
     TorrentAdd(TorrentAddArgs),
+    TorrentGet(TorrentGetArgs),
+}
+
+// TODO: "format" argument
+// TODO: "ids" can also be strings (hashes, 'recently-active' etc) check spec
+#[skip_serializing_none]
+#[derive(Serialize, Default)]
+pub struct TorrentGetArgs {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    fields: Option<Vec<TorrentGetFields>>,
+    ids: Option<Vec<u32>>,
+}
+
+// TODO complete rest of fields
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TorrentGetFields {
+    Error,
+    ErrorString,
+    Eta, // seconds
+    HashString,
+    Id,
+    LeftUntilDone, // bytes
+    PercentDone,   // [0..1]
+    Name,
+    RateDownload, // bytes per sec
+    SizeWhenDone, // ?
+    TotalSize,    // ?
+    Status,       // 0-6, defined in spec
+    #[serde(rename = "peer-limit")]
+    // i love that some fields are camelCase and some are kebab-case :D THANKS TRANSMISSION
+    PeerLimit,
+}
+
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize)]
+pub struct TorrentGet {
+    torrents: Vec<Torrent>,
+    removed: Option<Vec<Torrent>>,
+}
+
+impl ResponseArgs for TorrentGet {}
+
+#[skip_serializing_none]
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Torrent {
+    error: Option<u32>,
+    error_string: Option<String>,
+    eta: Option<i32>,
+    hash_string: Option<String>,
+    id: Option<i32>,
+    left_until_done: Option<i32>,
+    name: Option<String>,
+    #[serde(rename = "peer-limit")]
+    peer_limit: Option<i32>,
+    percent_done: Option<f32>,
+    rate_download: Option<i32>,
+    size_when_done: Option<i32>,
+    status: Option<i32>,
+    total_size: Option<i32>,
 }
 
 // TODO: (from spec) Either filename or metainfo must be included. All other arguments are optional  (OR just let user decide)
@@ -55,15 +118,6 @@ pub struct TorrentAddArgs {
     pub priority_high: Option<Vec<u32>>,
     pub priority_low: Option<Vec<u32>>,
     pub priority_normal: Option<Vec<u32>>,
-}
-
-// #[skip_serializing_none]
-#[derive(Deserialize, Serialize)]
-pub struct Torrent {
-    name: Option<String>,
-    id: Option<u32>,
-    #[serde(rename = "hashString")]
-    hash_string: Option<String>,
 }
 
 #[skip_serializing_none]
@@ -169,6 +223,14 @@ impl Client {
         self.request(Method::TorrentAdd, Some(Args::TorrentAdd(args)))
             .await
     }
+
+    pub async fn torrent_get(
+        &self,
+        args: TorrentGetArgs,
+    ) -> Result<TransmissionResponse<TorrentGet>> {
+        self.request(Method::TorrentGet, Some(Args::TorrentGet(args)))
+            .await
+    }
 }
 
 #[cfg(test)]
@@ -196,10 +258,34 @@ mod tests {
     async fn test_torrent_add() {
         let url = "http://127.0.0.1:9091/transmission/rpc".to_owned();
         let trans_client = Client::new(&url);
-        let arch_iso_magnet = "magnet:?xt=urn:btih:7a9c4a72e79fcf5f65f091e462b60e589af3f865&dn=archlinux-2023.08.01-x86_64.iso".to_owned();
+        let arch_iso_magnet = "magnet:?xt=urn:btih:ab6ad7ff24b5ed3a61352a1f1a7811a8c3cc6dde&dn=archlinux-2023.09.01-x86_64.iso".to_owned();
         let res = trans_client
             .torrent_add(TorrentAddArgs {
                 filename: Some(arch_iso_magnet),
+                ..Default::default()
+            })
+            .await;
+        match res {
+            Ok(res) => {
+                println!("Got response: {}", serde_json::to_string(&res).unwrap());
+            }
+            Err(e) => {
+                dbg!(e);
+            }
+        };
+    }
+
+    #[tokio::test]
+    async fn test_torrent_get() {
+        let url = "http://127.0.0.1:9091/transmission/rpc".to_owned();
+        let trans_client = Client::new(&url);
+        let res = trans_client
+            .torrent_get(TorrentGetArgs {
+                fields: Some(vec![
+                    TorrentGetFields::Name,
+                    TorrentGetFields::Eta,
+                    TorrentGetFields::PeerLimit,
+                ]),
                 ..Default::default()
             })
             .await;
